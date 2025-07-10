@@ -108,3 +108,12 @@ public class TokenUpdater {
         HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
     }
 }
+
+        };
+
+        SSLContext sc = SSLContext.getInstance("TLS");
+        sc.init(null, trustAllCerts, new SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+        HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
+    }
+}
