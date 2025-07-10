@@ -15,29 +15,29 @@ public class TokenUpdater {
 
     public static void main(String[] args) {
         try {
-            // Disable SSL validation like Postman (for self-signed certs)
+            // 1. Disable SSL certificate verification (for testing)
             disableSslVerification();
 
-            // Fetch token from API
+            // 2. Fetch token from API
             String token = fetchToken();
 
-            // Update token in properties file
-            updatePropertiesFile("config.properties", "auth.token", token);
+            // 3. Update the 'clolite' key in your .properties file
+            updatePropertiesFile("config.properties", "clolite", token);
 
-            System.out.println("✅ Token updated successfully: " + token);
+            System.out.println("✅ Token fetched and updated successfully.");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private static String fetchToken() throws IOException {
-        URL url = new URL("https://your-api-url.com/auth/token"); // Replace with your actual endpoint
+        URL url = new URL("https://your-api-url.com/auth/token"); // Replace with your actual API
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
 
-        // Set headers (as per your Postman example)
+        // 🟨 Headers
         conn.setRequestProperty("x-Context-Id", "test");
         conn.setRequestProperty("X-User-Id", "test");
         conn.setRequestProperty("X-Callers", "test");
@@ -45,52 +45,56 @@ public class TokenUpdater {
         conn.setRequestProperty("Accept", "*/*");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-        // Set request body (adjust to your API's format)
+        // 🟨 Body (adjust as per your API)
         String jsonInput = "{ \"client_id\": \"abc\", \"client_secret\": \"xyz\" }";
-
         try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = jsonInput.getBytes("utf-8");
-            os.write(input, 0, input.length);
+            os.write(jsonInput.getBytes("utf-8"));
         }
 
         int status = conn.getResponseCode();
-        if (status != 200) {
+        if (status != 200 && status != 201) {
             throw new RuntimeException("Failed to get token. HTTP error code: " + status);
         }
 
-        StringBuilder response;
+        StringBuilder response = new StringBuilder();
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(conn.getInputStream(), "utf-8"))) {
-            response = new StringBuilder();
             String responseLine;
             while ((responseLine = br.readLine()) != null) {
                 response.append(responseLine.trim());
             }
         }
 
+        System.out.println("🔍 API Response:\n" + response.toString());
+
         conn.disconnect();
 
-        // Parse JSON response
+        // 🟨 Extract token from response (adjust based on your actual JSON)
         JSONObject json = new JSONObject(response.toString());
-        return json.getString("access_token"); // adjust key if your token is under another field
+        return json.getString("access_token"); // Modify this if the key is different or nested
     }
 
     private static void updatePropertiesFile(String filePath, String key, String newValue) throws IOException {
         Properties props = new Properties();
+
+        // 🔁 Load existing properties
         try (InputStream input = new FileInputStream(filePath)) {
             props.load(input);
         }
 
+        // ✏️ Replace specific key
         props.setProperty(key, newValue);
 
+        // 💾 Save updated properties
         try (OutputStream output = new FileOutputStream(filePath)) {
             props.store(output, null);
         }
+
+        System.out.println("✅ Updated '" + key + "' in " + filePath);
     }
 
-    // Disable SSL certificate validation (like Postman)
     private static void disableSslVerification() throws Exception {
-        TrustManager[] trustAllCerts = new TrustManager[]{
+        TrustManager[] trustAllCerts = new TrustManager[] {
             new X509TrustManager() {
                 public void checkClientTrusted(X509Certificate[] certs, String authType) {}
                 public void checkServerTrusted(X509Certificate[] certs, String authType) {}
@@ -100,7 +104,6 @@ public class TokenUpdater {
 
         SSLContext sc = SSLContext.getInstance("TLS");
         sc.init(null, trustAllCerts, new SecureRandom());
-
         HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
         HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
     }
